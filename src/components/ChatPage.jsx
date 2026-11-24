@@ -6,6 +6,7 @@ import { auth, db } from "../firebase";
 import { parseActivityMessage, answerAboutLog } from "../gemini";
 import { useEntries } from "../useEntries";
 import ViewDoc from "./ViewDoc";
+import ExportModal from "./ExportModal";
 
 export default function ChatPage({ user }) {
   const defaultWelcome = {
@@ -26,6 +27,7 @@ export default function ChatPage({ user }) {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [showDoc, setShowDoc] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -157,10 +159,17 @@ export default function ChatPage({ user }) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowDoc(true)}
-            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
           >
             <span>📄</span>
             <span>View Log</span>
+          </button>
+          <button
+            onClick={() => setShowExport(true)}
+            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors shadow"
+          >
+            <span>📥</span>
+            <span>Export Doc</span>
           </button>
           <button
             onClick={() => signOut(auth)}
@@ -272,6 +281,15 @@ export default function ChatPage({ user }) {
           entries={entries}
           error={firestoreError}
           onClose={() => setShowDoc(false)}
+        />
+      )}
+
+      {/* Export Document modal */}
+      {showExport && (
+        <ExportModal
+          entries={entries}
+          user={user}
+          onClose={() => setShowExport(false)}
         />
       )}
     </div>
