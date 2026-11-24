@@ -58,7 +58,7 @@ function subjectColor(subject) {
   return colorMap[subject];
 }
 
-export default function ViewDoc({ entries, onClose }) {
+export default function ViewDoc({ entries, error, onClose }) {
   const grouped = useMemo(() => groupByDate(entries), [entries]);
 
   // Subject summary
@@ -88,6 +88,14 @@ export default function ViewDoc({ entries, onClose }) {
             </svg>
           </button>
         </div>
+
+        {/* Error notification if Firestore has issues */}
+        {error && (
+          <div className="px-5 py-2.5 bg-amber-950/60 border-b border-amber-800 text-amber-300 text-xs flex items-center gap-2">
+            <span>⚠️</span>
+            <span>Firestore note: {error}. Check Firebase Console Firestore Rules.</span>
+          </div>
+        )}
 
         {/* Subject chips summary */}
         {subjectSummary.length > 0 && (

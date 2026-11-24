@@ -1,31 +1,68 @@
 // src/components/ChatPage.jsx
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "firebase/auth";
-import { auth } from "../firebase";
+import { collection, addDoc, query, onSnapshot, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "../firebase";
 import { parseActivityMessage, answerAboutLog } from "../gemini";
 import { useEntries } from "../useEntries";
 import ViewDoc from "./ViewDoc";
 
 export default function ChatPage({ user }) {
-  const [messages, setMessages] = useState([
-    {
-      id: "welcome",
-      role: "ai",
-      text: `Hey ${user.displayName?.split(" ")[0] || "there"}! 👋 Tell me what you did today and I'll log it for you. For example: "I completed my EL project today at 4"`,
-    },
-  ]);
+  const defaultWelcome = {
+    id: "welcome",
+    role: "ai",
+    text: `Hey ${user.displayName?.split(" ")[0] || "there"}! 👋 Tell me what you did today and I'll log it for you. For example: "I completed my EL project today at 4"`,
+  };
+
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`chat_${user.uid}`);
+      return saved ? JSON.parse(saved) : [defaultWelcome];
+    } catch {
+      return [defaultWelcome];
+    }
+  });
+
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [showDoc, setShowDoc] = useState(false);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
-  const { entries, loading, addEntry } = useEntries(user.uid);
+  const { entries, loading, error: firestoreError, addEntry } = useEntries(user.uid);
 
-  // Auto-scroll to bottom on new message
+  // Sync messages from Firestore & save to localStorage
   useEffect(() => {
+    if (!user?.uid) return;
+
+    const q = query(collection(db, "users", user.uid, "messages"));
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        if (!snap.empty) {
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          list.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+          setMessages(list);
+          try {
+            localStorage.setItem(`chat_${user.uid}`, JSON.stringify(list));
+          } catch {}
+        }
+      },
+      (err) => {
+        console.warn("Messages firestore snapshot note:", err);
+      }
+    );
+
+    return unsub;
+  }, [user.uid]);
+
+  // Keep localStorage updated on message changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(`chat_${user.uid}`, JSON.stringify(messages));
+    } catch {}
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, user.uid]);
 
   function getCurrentDateTime() {
     return new Date().toLocaleString("en-IN", {
@@ -40,13 +77,26 @@ export default function ChatPage({ user }) {
     });
   }
 
+  async function persistMessage(msg) {
+    try {
+      await addDoc(collection(db, "users", user.uid, "messages"), {
+        ...msg,
+        timestamp: Date.now(),
+        createdAt: serverTimestamp(),
+      });
+    } catch (e) {
+      console.warn("Could not save message to Firestore (cached in localStorage):", e);
+    }
+  }
+
   async function handleSend() {
     const text = input.trim();
     if (!text || sending) return;
 
     // Add user message
-    const userMsg = { id: Date.now().toString(), role: "user", text };
+    const userMsg = { id: Date.now().toString(), role: "user", text, timestamp: Date.now() };
     setMessages((prev) => [...prev, userMsg]);
+    persistMessage(userMsg);
     setInput("");
     setSending(true);
 
@@ -54,15 +104,15 @@ export default function ChatPage({ user }) {
       const parsed = await parseActivityMessage(text, getCurrentDateTime());
 
       // Show Gemini's reply immediately
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString() + "_ai",
-          role: "ai",
-          text: parsed.reply,
-          logged: !!(parsed.subject && parsed.activity),
-        },
-      ]);
+      const aiMsg = {
+        id: Date.now().toString() + "_ai",
+        role: "ai",
+        text: parsed.reply,
+        logged: !!(parsed.subject && parsed.activity),
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, aiMsg]);
+      persistMessage(aiMsg);
 
       // Save to Firestore in background without delaying chat response
       if (parsed.subject && parsed.activity) {
@@ -76,14 +126,13 @@ export default function ChatPage({ user }) {
       }
     } catch (err) {
       console.error("Error processing message:", err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString() + "_err",
-          role: "ai",
-          text: `⚠️ Something went wrong: ${err.message || "Please check your Gemini API key."}`,
-        },
-      ]);
+      const errMsg = {
+        id: Date.now().toString() + "_err",
+        role: "ai",
+        text: `⚠️ Something went wrong: ${err.message || "Please check your Gemini API key."}`,
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, errMsg]);
     } finally {
       setSending(false);
       inputRef.current?.focus();
@@ -137,8 +186,13 @@ export default function ChatPage({ user }) {
             </div>
           )}
           <span className="text-slate-300 text-xs">{user.email}</span>
-          {!loading && (
+          {!loading && !firestoreError && (
             <span className="text-slate-500 text-xs">· {entries.length} entries</span>
+          )}
+          {firestoreError && (
+            <span className="text-amber-400 text-xs" title={firestoreError}>
+              · rules need publish
+            </span>
           )}
         </div>
       </div>
@@ -213,7 +267,13 @@ export default function ChatPage({ user }) {
       </footer>
 
       {/* View Document modal */}
-      {showDoc && <ViewDoc entries={entries} onClose={() => setShowDoc(false)} />}
+      {showDoc && (
+        <ViewDoc
+          entries={entries}
+          error={firestoreError}
+          onClose={() => setShowDoc(false)}
+        />
+      )}
     </div>
   );
 }
