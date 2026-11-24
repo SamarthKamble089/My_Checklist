@@ -53,18 +53,7 @@ export default function ChatPage({ user }) {
     try {
       const parsed = await parseActivityMessage(text, getCurrentDateTime());
 
-      // If Gemini extracted an activity, save it to Firestore
-      if (parsed.subject && parsed.activity) {
-        await addEntry({
-          raw: text,
-          subject: parsed.subject,
-          activity: parsed.activity,
-          date: parsed.date,
-          time: parsed.time,
-        });
-      }
-
-      // Show Gemini's reply
+      // Show Gemini's reply immediately
       setMessages((prev) => [
         ...prev,
         {
@@ -74,6 +63,17 @@ export default function ChatPage({ user }) {
           logged: !!(parsed.subject && parsed.activity),
         },
       ]);
+
+      // Save to Firestore in background without delaying chat response
+      if (parsed.subject && parsed.activity) {
+        addEntry({
+          raw: text,
+          subject: parsed.subject,
+          activity: parsed.activity,
+          date: parsed.date,
+          time: parsed.time,
+        }).catch((err) => console.error("Error saving entry to Firestore:", err));
+      }
     } catch (err) {
       console.error("Error processing message:", err);
       setMessages((prev) => [

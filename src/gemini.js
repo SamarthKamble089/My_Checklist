@@ -4,21 +4,25 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(apiKey || "");
 
+// Fastest models first
 const MODELS_TO_TRY = [
   "gemini-3.5-flash-lite",
+  "gemini-flash-lite-latest",
   "gemini-3.5-flash",
-  "gemini-3.8-flash",
 ];
 
 async function generateWithFallback(prompt) {
   let lastError = null;
   for (const modelName of MODELS_TO_TRY) {
     try {
-      const model = genAI.getGenerativeModel({ model: modelName });
+      const model = genAI.getGenerativeModel(
+        { model: modelName },
+        { timeout: 7000 }
+      );
       const result = await model.generateContent(prompt);
       return result.response.text().trim();
     } catch (err) {
-      console.warn(`Model ${modelName} failed, trying next:`, err.message || err);
+      console.warn(`Model ${modelName} slow or failed, falling back:`, err.message || err);
       lastError = err;
     }
   }
