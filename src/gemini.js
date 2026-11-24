@@ -1,15 +1,35 @@
 // src/gemini.js
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+const genAI = new GoogleGenerativeAI(apiKey || "");
+
+const MODELS_TO_TRY = [
+  "gemini-3.5-flash-lite",
+  "gemini-3.5-flash",
+  "gemini-3.8-flash",
+];
+
+async function generateWithFallback(prompt) {
+  let lastError = null;
+  for (const modelName of MODELS_TO_TRY) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(prompt);
+      return result.response.text().trim();
+    } catch (err) {
+      console.warn(`Model ${modelName} failed, trying next:`, err.message || err);
+      lastError = err;
+    }
+  }
+  throw lastError;
+}
 
 /**
  * Parse a natural-language activity message into structured data.
  * Returns { subject, activity, date, time, reply }
  */
 export async function parseActivityMessage(userMessage, currentDateTime) {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
   const prompt = `
 You are a personal activity tracker assistant. The user will tell you what they did today in plain English.
 Your job is to:
@@ -32,8 +52,7 @@ Respond ONLY with a valid JSON object in this exact format (no markdown, no code
 If the message is NOT an activity log (e.g. it's a question or greeting), set subject and activity to empty strings and put a helpful response in reply.
 `;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
+  const text = await generateWithFallback(prompt);
 
   try {
     // Strip markdown code fences if model wraps it anyway
@@ -54,8 +73,6 @@ If the message is NOT an activity log (e.g. it's a question or greeting), set su
  * Answer a question about the user's activity log.
  */
 export async function answerAboutLog(userMessage, entries, currentDateTime) {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
   const logSummary = entries
     .map(
       (e) =>
@@ -75,6 +92,6 @@ User's question: "${userMessage}"
 Give a helpful, concise answer based on their log.
 `;
 
-  const result = await model.generateContent(prompt);
-  return result.response.text().trim();
+  return await generateWithFallback(prompt);
 }
+

@@ -75,12 +75,13 @@ export default function ChatPage({ user }) {
         },
       ]);
     } catch (err) {
+      console.error("Error processing message:", err);
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now().toString() + "_err",
           role: "ai",
-          text: "⚠️ Something went wrong. Please check your Gemini API key.",
+          text: `⚠️ Something went wrong: ${err.message || "Please check your Gemini API key."}`,
         },
       ]);
     } finally {
