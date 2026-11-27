@@ -131,35 +131,52 @@ export default function ViewDoc({ entries, error, onClose }) {
                 </div>
 
                 {/* Entries for that day */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                   {dayEntries.map((entry) => (
                     <div
                       key={entry.id}
-                      className="bg-slate-800 rounded-xl p-3.5 flex flex-col gap-1.5 border border-slate-700"
+                      className="bg-slate-800/90 rounded-2xl p-4 flex flex-col gap-2.5 border border-slate-700 shadow-md transition-all hover:border-slate-600"
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-white text-sm font-medium leading-snug flex-1">
-                          {entry.activity}
-                        </span>
-                        {entry.time && (
-                          <span className="text-slate-500 text-xs flex-shrink-0 mt-0.5">
-                            {formatTime(entry.time)}
+                      {/* Prominent Date, Time & Subject Header Bar */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-700/60">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="flex items-center gap-1.5 text-xs font-bold text-amber-300 bg-amber-950/80 border border-amber-600/50 px-2.5 py-1 rounded-lg">
+                            <span>📅</span>
+                            <span>{formatDate(entry.date || date)}</span>
+                          </span>
+                          {entry.time && (
+                            <span className="flex items-center gap-1.5 text-xs font-bold text-cyan-300 bg-cyan-950/80 border border-cyan-600/50 px-2.5 py-1 rounded-lg">
+                              <span>⏰</span>
+                              <span>{formatTime(entry.time)}</span>
+                            </span>
+                          )}
+                        </div>
+                        {entry.subject && (
+                          <span
+                            className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${subjectColor(
+                              entry.subject
+                            )}`}
+                          >
+                            🏷️ {entry.subject}
                           </span>
                         )}
                       </div>
-                      {entry.subject && (
-                        <span
-                          className={`text-xs font-medium px-2 py-0.5 rounded-full border w-fit ${subjectColor(
-                            entry.subject
-                          )}`}
-                        >
-                          {entry.subject}
+
+                      {/* Keywords Action Block */}
+                      <div className="flex items-baseline gap-2 pt-0.5">
+                        <span className="text-indigo-400 font-bold text-xs uppercase tracking-wider flex-shrink-0">
+                          Keywords:
                         </span>
-                      )}
+                        <span className="text-white text-base font-bold tracking-tight">
+                          {entry.activity}
+                        </span>
+                      </div>
+
+                      {/* Original raw note if available */}
                       {entry.raw && (
-                        <p className="text-slate-500 text-xs italic border-t border-slate-700 pt-1.5 mt-0.5">
-                          "{entry.raw}"
-                        </p>
+                        <div className="text-slate-400 text-xs italic bg-slate-900/50 rounded-lg px-3 py-1.5 border border-slate-800">
+                          <span className="text-slate-500 font-semibold not-italic">Input: </span>"{entry.raw}"
+                        </div>
                       )}
                     </div>
                   ))}

@@ -12,7 +12,7 @@ export default function ChatPage({ user }) {
   const defaultWelcome = {
     id: "welcome",
     role: "ai",
-    text: `Hey ${user.displayName?.split(" ")[0] || "there"}! 👋 Tell me what you did today and I'll log it for you. For example: "I completed my EL project today at 4"`,
+    text: `Hey ${user.displayName?.split(" ")[0] || "there"}! 👋 Tell me what you did today in plain English. I'll extract key action keywords with the exact date and time, and log them to your document! (e.g. "I completed my EL project today at 4")`,
   };
 
   const [messages, setMessages] = useState(() => {
@@ -106,11 +106,20 @@ export default function ChatPage({ user }) {
       const parsed = await parseActivityMessage(text, getCurrentDateTime());
 
       // Show Gemini's reply immediately
+      const isLogged = !!(parsed.subject && parsed.activity);
       const aiMsg = {
         id: Date.now().toString() + "_ai",
         role: "ai",
         text: parsed.reply,
-        logged: !!(parsed.subject && parsed.activity),
+        logged: isLogged,
+        entryData: isLogged
+          ? {
+              subject: parsed.subject,
+              activity: parsed.activity,
+              date: parsed.date,
+              time: parsed.time,
+            }
+          : null,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, aiMsg]);
@@ -222,11 +231,38 @@ export default function ChatPage({ user }) {
             >
               {msg.text}
               {msg.logged && (
-                <div className="mt-1.5 flex items-center gap-1 text-xs text-green-400">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Logged to your document
+                <div className="mt-2.5 pt-2 border-t border-slate-600/70 flex flex-col gap-2">
+                  {msg.entryData && (
+                    <div className="bg-slate-800/90 rounded-xl p-2.5 border border-slate-600/60 flex flex-col gap-1.5 text-xs">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {msg.entryData.date && (
+                          <span className="flex items-center gap-1 bg-amber-950/80 text-amber-300 font-bold px-2 py-0.5 rounded border border-amber-600/50">
+                            📅 {msg.entryData.date}
+                          </span>
+                        )}
+                        {msg.entryData.time && (
+                          <span className="flex items-center gap-1 bg-cyan-950/80 text-cyan-300 font-bold px-2 py-0.5 rounded border border-cyan-600/50">
+                            ⏰ {msg.entryData.time}
+                          </span>
+                        )}
+                        {msg.entryData.subject && (
+                          <span className="bg-indigo-950/80 text-indigo-300 font-bold px-2 py-0.5 rounded border border-indigo-600/50">
+                            🏷️ {msg.entryData.subject}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-white text-xs font-semibold pt-0.5">
+                        <span className="text-indigo-300 font-bold">Keywords: </span>
+                        {msg.entryData.activity}
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5 text-xs text-green-400 font-medium">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span>Logged to your document</span>
+                  </div>
                 </div>
               )}
             </div>

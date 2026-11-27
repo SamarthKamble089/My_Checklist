@@ -35,10 +35,18 @@ async function generateWithFallback(prompt) {
  */
 export async function parseActivityMessage(userMessage, currentDateTime) {
   const prompt = `
-You are a personal activity tracker assistant. The user will tell you what they did today in plain English.
-Your job is to:
-1. Extract structured data from their message
-2. Give a friendly short confirmation reply
+You are a personal activity tracker assistant. The user will tell you what they did in plain English.
+Your job is to extract structured activity data and return a friendly confirmation.
+
+CRITICAL EXTRACTION REQUIREMENTS:
+1. "activity": Extract ONLY crisp action KEYWORDS (2 to 5 words max). For example: "Completed EL Project", "Solved BST Problems", "Physics Lab Simulation", "Maths Assignment 3".
+   - DO NOT write full sentences or narrative paragraphs.
+   - DO NOT include conversational filler like "I was working on", "I completed", "today at 4pm".
+   - Keep it strictly concise keywords.
+2. "subject": Core domain, subject, or course name (e.g. "EL", "DSA", "Maths", "Physics", "General").
+3. "date": Date in "YYYY-MM-DD" format (use current date if not mentioned).
+4. "time": Time in 24hr "HH:MM" format (e.g. "16:00", "09:30" - use current time if not mentioned).
+5. "reply": A friendly 1-sentence confirmation highlighting the keywords logged with date and time.
 
 Current date and time: ${currentDateTime}
 
@@ -46,14 +54,14 @@ User's message: "${userMessage}"
 
 Respond ONLY with a valid JSON object in this exact format (no markdown, no code block, just raw JSON):
 {
-  "subject": "the subject/project name (e.g. EL, DSA, Maths, Physics Lab)",
-  "activity": "a concise description of what they did",
-  "date": "YYYY-MM-DD (use current date if not mentioned)",
-  "time": "HH:MM in 24hr format (use current time if not mentioned)",
-  "reply": "a friendly 1-sentence confirmation to show the user in chat"
+  "subject": "Core Subject",
+  "activity": "Crisp Action Keywords (2-5 words)",
+  "date": "YYYY-MM-DD",
+  "time": "HH:MM",
+  "reply": "friendly 1-sentence confirmation"
 }
 
-If the message is NOT an activity log (e.g. it's a question or greeting), set subject and activity to empty strings and put a helpful response in reply.
+If the message is NOT an activity log (e.g. it is a general question or greeting), set subject and activity to empty strings and put a helpful response in reply.
 `;
 
   const text = await generateWithFallback(prompt);

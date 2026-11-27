@@ -59,13 +59,16 @@ function generateReportHtml(entries, user) {
         .map(
           (e) => `
         <tr style="border-bottom:1px solid #e2e8f0;">
-          <td style="padding:10px;font-size:13px;color:#64748b;white-space:nowrap;vertical-align:top;">${formatTime(e.time) || "—"}</td>
-          <td style="padding:10px;font-size:13px;vertical-align:top;">
-            <strong style="display:inline-block;background:#f1f5f9;color:#0f172a;padding:2px 8px;border-radius:6px;font-size:11px;border:1px solid #cbd5e1;">${e.subject || "General"}</strong>
+          <td style="padding:10px;font-size:12px;vertical-align:top;width:170px;">
+            <div style="font-weight:bold;color:#1e1b4b;">📅 ${formatDate(e.date || date)}</div>
+            ${e.time ? `<div style="font-size:12px;font-weight:bold;color:#0284c7;margin-top:3px;">⏰ ${formatTime(e.time)}</div>` : ""}
+          </td>
+          <td style="padding:10px;font-size:12px;vertical-align:top;width:120px;">
+            <strong style="display:inline-block;background:#e0e7ff;color:#3730a3;padding:3px 8px;border-radius:6px;font-size:11px;border:1px solid #c7d2fe;">${e.subject || "General"}</strong>
           </td>
           <td style="padding:10px;font-size:13px;color:#1e293b;vertical-align:top;">
-            <div style="font-weight:500;">${e.activity || ""}</div>
-            ${e.raw ? `<div style="font-size:11px;color:#94a3b8;font-style:italic;margin-top:4px;">"${e.raw}"</div>` : ""}
+            <div style="font-weight:bold;color:#0f172a;font-size:14px;">${e.activity || ""}</div>
+            ${e.raw ? `<div style="font-size:11px;color:#64748b;font-style:italic;margin-top:4px;background:#f8fafc;padding:3px 8px;border-radius:4px;border:1px solid #f1f5f9;">Note: "${e.raw}"</div>` : ""}
           </td>
         </tr>
       `
@@ -80,9 +83,9 @@ function generateReportHtml(entries, user) {
           <table style="width:100%;border-collapse:collapse;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
             <thead>
               <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;text-align:left;font-size:12px;color:#475569;">
-                <th style="padding:10px;width:90px;">TIME</th>
+                <th style="padding:10px;width:170px;">DATE & TIME</th>
                 <th style="padding:10px;width:120px;">SUBJECT</th>
-                <th style="padding:10px;">ACTIVITY</th>
+                <th style="padding:10px;">ACTION KEYWORDS</th>
               </tr>
             </thead>
             <tbody>
